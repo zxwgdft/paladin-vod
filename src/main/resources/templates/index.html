@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>视频上传</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport"/>
+    <link rel="stylesheet" href="/static/assets/layui/css/layui.css"/>
+    <style type="text/css">
+        .upload-layer {
+            padding: 30px;
+        }
+
+        .upload-btn {
+            text-align: right;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+
+<body style="background-color: #f2f2f2;padding-top: 30px">
+
+<div class="layui-container">
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-md12">
+            <div class="layui-card">
+                <div class="layui-card-body">
+                    <div class="layui-tab layui-tab-brief" lay-filter="component-tabs-brief">
+                        <ul class="layui-tab-title">
+                            <li class="layui-this">视频列表</li>
+                            <li>视频上传</li>
+                        </ul>
+                        <div class="layui-tab-content">
+                            <div class="layui-tab-item layui-show">
+                                <table id="completedTable"></table>
+                            </div>
+                            <div class="layui-tab-item">
+                                <div style="text-align: right">
+                                    <button onclick="openUpload()" class="layui-btn"><i class="layui-icon">&#xe67c;</i>开始上传
+                                    </button>
+                                </div>
+                                <table id="uploadTable" lay-filter="upload-table"></table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!--引入JS-->
+<script type="text/javascript" src="/static/assets/jquery/jquery-2.2.4.min.js"></script>
+<script type="text/javascript" src="/static/assets/layui/layui.all.js"></script>
+<script type="text/javascript" src="/static/js/common.js"></script>
+
+<script type="text/html" id="uploadBtnBar">
+    <a class="layui-btn layui-btn-normal layui-btn-xs" lay-event="upload">上传</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+
+<script type="text/javascript">
+
+    var rtmpUrl;
+
+    $(function () {
+        init();
+    });
+
+    function init() {
+        layui.table.render({
+            id: 'completedTable',
+            elem: '#completedTable',
+            url: '/vod/upload/find/completed/page',
+            page: true,
+            headers: {'Authorization': $.getToken()},
+            cols: [
+                [
+                    {field: 'fileName', title: '用户名'},
+                    {
+                        field: 'id', title: 'URL', templet: function (row) {
+                            return rtmpUrl + '/' + row.id + '.mp4';
+                        }
+                    },
+                    {
+                        field: 'fileSize', title: '文件大小', width: 100, align: 'center', templet: function (row) {
+                            return Math.round(row.fileSize / (1024 * 1024)) + "M";
+                        }
+                    },
+                    {field: 'createTime', width: 170, align: 'center', title: '创建时间'},
+                    {
+                        field: 'transcodeStatus',
+                        title: '视频转码状态',
+                        width: 120,
+                        align: 'center',
+                        templet: function (row) {
+                            var s = row.transcodeStatus;
+                            return s == 1 ? '视频转码中...' : (s == 2 ? '视频转码成功' : '视频转码失败');
+                        }
+                    },
+                ]
+            ],
+            parseData: function (res) { //res 即为原始返回的数据
+                var data = res.data.list;
+                rtmpUrl = res.data.url;
+                return {
+                    "code": res.code == 200 ? 0 : res.code, //解析接口状态
+                    "msg": res.message, //解析提示文本
+                    "count": data ? data.total : 0, //解析数据长度
+                    "data": data ? data.data : [] //解析数据列表
+                };
+            }
+        });
+
+        layui.table.render({
+            id: 'uploadTable',
+            elem: '#uploadTable',
+            url: '/vod/upload/find/uploading',
+            headers: {'Authorization': $.getToken()},
+            page: false,
+            cols: [
+                [
+                    {field: 'fileName', title: '用户名'},
+                    {
+                        field: 'fileSize', title: '上传进度', width: 160, align: 'center', templet: function (row) {
+                            return Math.round(row.finishChunk * row.chunkSize * 1024 * 102400 / row.fileSize) + '%';
+                        }
+                    },
+                    {field: 'createTime', width: 170, align: 'center', title: '创建时间'},
+                    {width: 165, align: 'center', toolbar: '#uploadBtnBar'}
+                ]
+            ],
+            parseData: function (res) { //res 即为原始返回的数据
+                if (res.success == true) {
+                    return {
+                        code: 0,
+                        data: res.data
+                    }
+                } else {
+                    $.errorMessage(res.message);
+                    return [];
+                }
+            }
+        });
+
+        layui.table.on('tool(upload-table)', function (obj) {
+            var data = obj.data, layEvent = obj.event;
+            if (layEvent === 'upload') {
+                openUpload(data.id, data.fileName, data.fileSize);
+            } else if (layEvent === 'del') {
+                layer.confirm('确定删除么', function (index) {
+                    $.postAjax("/vod/upload/delete", {id: data.id}, function () {
+                        layui.table.reload("uploadTable");
+                    });
+                    layer.close(index);
+                });
+            }
+        });
+    }
+
+    function openUpload(id, fileName, fileSize) {
+        var isNew = id ? false : true;
+        $.openPageLayer(layerContent, {
+            title: '上传视频',
+            width: 550,
+            height: 300,
+            success: function () {
+                if (isNew) {
+                    $("#fileName").text("请选择上传文件");
+                } else {
+                    $("#fileName").text("请选择上传文件：" + fileName + "");
+                }
+
+                $("#fileInput").change(function () {
+                    var dom = $(this)[0];
+                    if (dom.files.length > 0) {
+                        $("#fileName").text(dom.files[0].name);
+                        $("#progressSlogan").text("准备开始上传");
+                    }
+                });
+
+                $("#checkBtn").click(function () {
+                    $("#fileInput").click();
+                });
+
+                $("#startBtn").click(function () {
+                    var f = $("#fileInput")[0];
+                    if (f.files.length > 0) {
+                        var file = f.files[0];
+
+                        if (!isNew && file.size != fileSize) {
+                            $.errorMessage("您选择续传的文件与原上传文件大小不一致，请确认是否原文件");
+                            return;
+                        }
+
+                        if (isNew) {
+                            $.postAjax("/vod/upload/create", {
+                                fileName: file.name,
+                                clientFilePath: file.name,
+                                fileSize: file.size
+                            }, function (data) {
+                                if (data.status == 1) {
+                                    new _Uploader(file, data).uploadChunk();
+                                } else {
+                                    $.infoMessage("上传文件结束");
+                                }
+                            });
+                        } else {
+                            $.postAjax("/vod/upload/continue", {
+                                id: id
+                            }, function (data) {
+                                if (data.status == 1) {
+                                    new _Uploader(file, data).uploadChunk();
+                                } else {
+                                    $.infoMessage("上传文件结束");
+                                }
+                            });
+                        }
+                    } else {
+                        $.errorMessage("请选择上传文件");
+                    }
+                });
+            }
+        });
+    }
+
+    var _Uploader = function (file, options) {
+        var that = this;
+        that.file = file;
+        that.fileSize = file.size;
+        that.uploadId = options.id;
+        that.chunkSize = options.chunkSize;
+        that.currentChunk = options.currentChunk;
+        that.chunkCount = Math.ceil(that.fileSize / that.chunkSize);
+        that.status = 1;
+        that.updateProgress();
+    }
+
+    _Uploader.prototype.uploadChunk = function () {
+        var that = this;
+
+        if (that.status != 1) {
+            return;
+        }
+
+        var start = that.currentChunk * that.chunkSize,
+            end = Math.min(that.fileSize, start + that.chunkSize);
+
+        var form = new FormData();
+        form.append("id", that.uploadId);
+        form.append("file", that.file.slice(start, end));  //slice方法用于切出文件的一部分
+        form.append("chunk", that.currentChunk);
+
+        //Ajax提交
+        $.ajax({
+            url: "/vod/upload/chunk",
+            type: "POST",
+            headers: {
+                'Authorization': $.getToken()
+            },
+            data: form,
+            async: true,        //异步
+            processData: false,  //jquery不要对form进行处理
+            contentType: false,  //指定为false才能形成正确的Content-Type
+            success: function (response) {
+                if (response.success == true) {
+                    var data = response.data;
+                    var status = data.status;
+                    if (status == 1) {
+                        that.status = 1;
+                        that.currentChunk = data.currentChunk;
+                        that.uploadChunk();
+                    } else {
+                        that.status = 2;
+                        $.successMessage("上传完成");
+                        layui.table.reload("completedTable");
+                    }
+                } else {
+                    that.status = 3
+                    $.errorMessage("上传异常");
+                    layui.table.reload("completedTable");
+                    layui.table.reload("uploadTable");
+                }
+                that.updateProgress();
+            }
+        });
+    }
+
+    _Uploader.prototype.updateProgress = function () {
+        var status = this.status;
+        if (status == 1) {
+            var progressPercentage = Math.round(this.currentChunk / this.chunkCount * 100);
+            layui.element.progress("upload-progress", progressPercentage + "%");
+        } else if (status == 2) {
+            layui.element.progress("upload-progress", "100%");
+        } else {
+
+        }
+    }
+
+
+    var layerContent = '    <div class="upload-layer">\n' +
+        '        <div class="layui-row">\n' +
+        '            <div class="layui-col-md8">\n' +
+        '                <h3 id="fileName">\n' +
+        '                </h3>\n' +
+        '            </div>\n' +
+        '            <div class="layui-col-md4 upload-btn">\n' +
+        '                <input type="file" id="fileInput" style="display: none"/>\n' +
+        '                <button id="checkBtn" class="layui-btn layui-btn-normal layui-btn-sm">选择文件</button>\n' +
+        '                <button id="startBtn" class="layui-btn layui-btn-sm">开始上传</button>\n' +
+        '            </div>\n' +
+        '        </div>\n' +
+        '        <div class="layui-row">\n' +
+        '            <div class="layui-col-md12">\n' +
+        '                <div class="layui-progress layui-progress-big" lay-showpercent="yes" lay-filter="upload-progress">\n' +
+        '                    <div class="layui-progress-bar" lay-percent="0%"></div>\n' +
+        '                </div>\n' +
+        '            </div>\n' +
+        '        </div>\n' +
+        '    </div>';
+
+</script>
+</body>
+
+</html>

@@ -1,0 +1,55 @@
+logging:
+  level:
+    com:
+      paladin:
+        vod:
+          mapper: DEBUG
+
+server:
+  port: 9010
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+  datasource:
+    name: vod
+    url: jdbc:mysql://172.16.16.120:3306/vod?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8
+    username: netin
+    password: 123456
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      minimum-idle: 15
+      maximum-pool-size: 15
+  redis:
+    host: 172.16.16.120
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        max-wait: 5000
+        min-idle: 0
+    password: ''
+    port: 6379
+    timeout: 1000
+  thymeleaf:
+    cache: false
+
+# jwt 相关配置，超时时间会被覆盖
+jwt:
+  key: rkoNCPXJT0F8RvqvAcW6F41ygXE7TX8oZqi3FMY5rMHe+Lt0JdLRkWEU1H47RJLfm2mgvVmocs2vPt8m/8td0A==
+  expire-millisecond: 3600000
+
+ribbon:
+  ReadTimeout: 6000
+  ConnectTimeout: 6000
+
+
+vod:
+  rtmp-server-url: http://172.16.16.120:9999
+  ffmpeg: E:/ffmpeg/bin/ffmpeg.exe
+  upload:
+    folder: E:/upload/
+  transcode:
+    folder: E:/transcode/

@@ -1,0 +1,24 @@
+spring:
+  profiles:
+    active: @spring.profiles.active@
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  mvc:
+    date-format: yyyy-MM-dd HH:mm:ss
+    view:
+      prefix: classpath:/templates
+      suffix: .html
+  thymeleaf:
+    encoding: UTF-8
+    mode: HTML
+    prefix: classpath:/templates
+    servlet:
+      content-type: text/html
+
+mapper:
+  mappers: com.paladin.framework.mybatis.CustomMapper
+  enumAsSimpleType: true
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+
