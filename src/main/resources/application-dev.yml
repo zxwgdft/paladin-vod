@@ -22,24 +22,8 @@ spring:
     hikari:
       minimum-idle: 15
       maximum-pool-size: 15
-  redis:
-    host: 172.16.16.120
-    lettuce:
-      pool:
-        max-active: 8
-        max-idle: 8
-        max-wait: 5000
-        min-idle: 0
-    password: ''
-    port: 6379
-    timeout: 1000
   thymeleaf:
     cache: false
-
-# jwt 相关配置，超时时间会被覆盖
-jwt:
-  key: rkoNCPXJT0F8RvqvAcW6F41ygXE7TX8oZqi3FMY5rMHe+Lt0JdLRkWEU1H47RJLfm2mgvVmocs2vPt8m/8td0A==
-  expire-millisecond: 3600000
 
 ribbon:
   ReadTimeout: 6000
@@ -47,9 +31,13 @@ ribbon:
 
 
 vod:
+  # nginx访问视频地址
   rtmp-server-url: http://172.16.16.120:9999
+  # ffmpeg工具地址（windows下好像无法通过配置的环境变量运行，需要完整目录，centos下可以直接ffmpeg）
   ffmpeg: E:/ffmpeg/bin/ffmpeg.exe
+  # 视频上传存放目录
   upload:
     folder: E:/upload/
+  # 视频转码后存放目录，该目录应该与nginx配置的视频目录一致，从而转码成功后即可通过nginx点播视频
   transcode:
     folder: E:/transcode/

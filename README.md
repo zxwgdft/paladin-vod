@@ -6,6 +6,8 @@
 2. 视频转码，利用ffmepg对视频进行转码（转成aac编码的音频和h264编码的视频），同时视频大小将被大大压缩（需要安装ffmepg）
 3. 视频点播，搭建加载nginx-rtmp-module模块的nginx，进行点播（安装带rtmp模块的nginx）
 
+## 项目运行
+创建数据库，并执行项目中的vod.sql文件创建表，然后修改application-dev.yml中的数据库配置后即可运行
 
 ## 安装nginx和nginx-rtmp-module
 网上介绍安装的很多，这里只简单介绍我这边的安装，环境为centos。
