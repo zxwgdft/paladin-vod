@@ -13,32 +13,38 @@
 网上介绍安装的很多，这里只简单介绍我这边的安装，环境为centos。
 
 
-1. 下载nginx
+## 下载模块源码（安装包中已经有的可以直接拷贝）
 ```
 git clone https://github.com/arut/nginx-rtmp-module.git
+wget http://h264.code-shop.com/download/nginx_mod_h264_streaming-2.2.7.tar.gz
 wget http://nginx.org/download/nginx-1.8.1.tar.gz
-tar -zxvf nginx-1.8.1.tar.gz
-```
 
-2. 安装编译环境
+tar -zxvf nginx-1.8.1.tar.gz
+tar -zxvf nginx_mod_h264_streaming-2.2.7.tar.gz
+```
+## 安装编译环境
 ```
 yum -y install gcc-c++
 yum -y install pcre-devel openssl openssl-devel
+
+cd nginx-1.8.1
 ```
-3. 开启MP4模块,注意: 一定要开启ssl模块
+### 开启MP4模块、ssl模块，加载rtmp模块和h264模块
+### prefix 安装后文件放置于
 ```
-./configure --prefix=/usr/local/nginx --with-http_ssl_module --with-http_mp4_module
-make && sudo make install
+./configure --prefix=/usr/local/nginx 
+--with-http_ssl_module 
+--with-http_mp4_module
+--add-module=/home/nginx-rtmp-module
+--add-module=/home/nginx_mod_h264_streaming-2.2.7
 ```
-4. 配置rtmp
+## 编译
 ```
-./configure --add-module=/home/focus/live_streaming/nginx-rtmp-module
-make && sudo make install
+make
+``` 
+## 安装
 ```
-5. 配置h264
-```
-./configure --add-module=/home/focus/live_streaming/nginx_mod_h264_streaming-2.2.7
-make && sudo make install
+sudo make install
 ```
 
 ## 不出意外的话, make会报两个error需要处理
@@ -58,13 +64,6 @@ if (r->zero_in_uri)
 ```
 #user  nobody;
 worker_processes  1;
-
-#error_log  logs/error.log;
-#error_log  logs/error.log  notice;
-#error_log  logs/error.log  info;
-
-#pid        logs/nginx.pid;
-
 
 events {
     worker_connections  1024;
@@ -86,25 +85,16 @@ rtmp {
 http {
     include       mime.types;
     default_type  application/octet-stream;
-
     sendfile        on;
-    #tcp_nopush     on;
-
-    #keepalive_timeout  0;
     keepalive_timeout  65;
-
-    #gzip  on;
-
     server {
         listen       9999;
         server_name  video_server;
         # 指向了视频存放的根目录
         root /usr/local/nginx/video;
+        # 限制速率
         limit_rate 512k;
-
-        #charset koi8-r;
-        #access_log  logs/host.access.log  main;
-
+        
         location / {
             root   html;
             index  index.html index.htm;
